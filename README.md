@@ -1,117 +1,75 @@
 # KubeVirt Context
 
-AI-powered KubeVirt code intelligence with cross-repository analysis and GitHub history, powered by MCP servers and compatible with [Pi](https://github.com/earendil-works/pi), [Codex](https://developers.openai.com/codex/cli/), [Claude Code](https://claude.com/claude-code), [Cursor Agent](https://cursor.com/), and [OpenCode](https://opencode.ai/).
+Organization-wide context for AI coding agents working on [KubeVirt](https://github.com/kubevirt). `kvctx` clones every active, non-fork repository and builds a cross-repository [CodeGraph](https://github.com/colbymchenry/codegraph) index. Agent skills guide setup, research, PR reviews, and workspace maintenance.
 
-## Overview
+Works with [Pi](https://github.com/earendil-works/pi), [Claude Code](https://claude.com/claude-code), [Codex](https://developers.openai.com/codex/cli/), [Cursor Agent](https://cursor.com/), and [OpenCode](https://opencode.ai/).
 
-Every repository in the [KubeVirt](https://github.com/kubevirt) organization is shallow-cloned at the latest commit and indexed into a single [CodeGraph](https://github.com/colbymchenry/codegraph), enabling AI agents to understand how code is connected across repositories through the **CodeGraph MCP Server**.
+## Get started
 
-The **GitHub MCP Server** provides access to pull requests, issues, and code review history. The [Agent Package Manager](https://microsoft.github.io/apm/) integrates both MCP servers with **Pi**, **Codex**, **Claude Code**, **Cursor Agent**, or **OpenCode**, guided by the [kubevirt-architecture skill](.apm/skills/kubevirt-architecture/SKILL.md).
+### 1. Install kvctx
 
-## Example Q&A
-
-User asked:
-
-> Are there duplicate implementations of the VM object graph?
-
-AI agent replied (_using the GLM 5.3 model_):
-
-> **Yes — there appear to be two**. [VEP 41](https://github.com/kubevirt/enhancements/issues/41) introduced the `objectgraph` API in 2025 (Alpha) while the Velero plugin has its own `kvgraph` implementation (2023). The two implementations appear to share similar logic. [VEP 41](https://github.com/kubevirt/enhancements/issues/41) targets Beta graduation, but whether that includes merging the implementations should be verified against the proposal.
-
-## Prerequisites
-
-| Tool                                                                                                                                                                                                             | Summary                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [Python 3.10+](https://www.python.org/)                                                                                                                                                                          | Running the workspace CLI and cloning sources           |
-| [GitHub CLI](https://cli.github.com/)                                                                                                                                                                            | Discovering and cloning the organization's repositories |
-| [Pi](https://github.com/earendil-works/pi), [Codex](https://developers.openai.com/codex/cli/), [Claude Code](https://claude.com/claude-code), [Cursor](https://cursor.com/), or [OpenCode](https://opencode.ai/) | The AI agent you ask questions                          |
-| [APM](https://microsoft.github.io/apm/)                                                                                                                                                                          | Installing the MCP servers and research skill           |
-| [CodeGraph](https://github.com/colbymchenry/codegraph)                                                                                                                                                           | Indexing symbols and references across clones           |
-| [Podman](https://podman.io/) or [Docker](https://www.docker.com/)                                                                                                                                                | Running the GitHub MCP server locally                   |
-
-## Installation
-
-**Step 1 — Install `gh` and Podman via your package manager, then install APM**:
+With [uv](https://docs.astral.sh/uv/) installed:
 
 ```sh
-curl -sSL https://aka.ms/apm-unix | sh
+uv tool install --from git+https://github.com/codingben/kubevirt-context kubevirt-context
 ```
 
-**Step 2 — Install CodeGraph**:
+### 2. Install the skills
 
 ```sh
-npm install -g @colbymchenry/codegraph
+kvctx skills install
 ```
 
-**Step 3 — Install an agent** (pick one or more):
+Skills go into `~/.agents/skills` by default. Pass a directory if your agent uses another location. Reload or restart your agent to discover them.
+
+### 3. Invoke the setup skill
+
+Invoke the `kubevirt-setup` skill using your agent's skill mechanism, or ask it to **"use kubevirt-setup to set up the KubeVirt workspace"**.
+
+The skill checks Git, authenticated `gh`, CodeGraph, and the agent's live CodeGraph MCP access. It explains missing prerequisites, confirms the repository scope, then clones and indexes the workspace and verifies that queries work.
+
+Data lives in `~/.local/share/kubevirt-context` by default; set `KUBEVIRT_CONTEXT_HOME` to choose another location. Full setup can take minutes and substantial disk space. Ask for a smaller trial if you prefer.
+
+## Skills
+
+| Skill | Purpose |
+|---|---|
+| `kubevirt-context` | Orientation and routing to the right task skill |
+| `kubevirt-setup` | First-time setup and verification |
+| `kubevirt-doctor` | Diagnose tooling and connection problems |
+| `kubevirt-workspace` | Sync repositories, refresh the index, inspect status, and clean up |
+| `kubevirt-research` | Trace architecture, implementations, and consumers across repositories |
+| `kubevirt-pr-review` | Review a PR, including its cross-repository impact |
+
+After setup, ask questions such as **"how does VM cloning work across repositories?"** or **"review this KubeVirt PR for affected consumers."** GitHub history uses `gh` by default; an existing GitHub MCP connection can also be used.
+
+Research clones are read-only snapshots: the skills do not build, test, edit, or execute repository code. Workspace operations leave your agent configuration alone.
+
+See [docs/skills.md](docs/skills.md) for details, or run `kvctx --help` for CLI commands.
+
+## Uninstall
+
+Remove the installed skills before uninstalling the tool:
 
 ```sh
-# Pi
-curl -fsSL https://pi.dev/install.sh | sh
-
-# Codex
-npm install -g @openai/codex
-
-# Claude Code
-curl -fsSL https://claude.ai/install.sh | bash
-
-# Cursor CLI
-curl https://cursor.com/install -fsS | bash
-
-# OpenCode
-curl -fsSL https://opencode.ai/install | bash
+kvctx skills uninstall
+uv tool uninstall kubevirt-context
 ```
 
-**Step 4 — Authenticate the GitHub CLI**:
+Pass the same directory used during installation if it was not the default. Only manifest-owned skills are removed; locally modified skills require `--force`. Other skills, agent configuration, and workspace data are left alone. Reload or restart your agent afterward.
 
-```sh
-gh auth login
-```
+## Development
 
-**Step 5 — Clone this repository**:
+Install from source:
 
 ```sh
 git clone https://github.com/codingben/kubevirt-context.git
 cd kubevirt-context
+uv tool install --from . kubevirt-context
+kvctx skills install
 ```
 
-**Step 6 — Verify prerequisites are installed and authenticated**:
-
-```sh
-make doctor
-```
-
-**Step 7 — Clone every kubevirt repository, build the CodeGraph index, and install the MCP config**:
-
-```sh
-make setup
-```
-
-**Step 8 — Launch your AI agent**:
-
-```sh
-opencode # or and: pi | codex | claude | cursor-agent
-```
-
-## Usage
-
-| Command       | Description                                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| `make setup`  | Clone every repository, build the index, install MCP config (one-time) |
-| `make status` | Inventory and graph status                                             |
-| `make sync`   | Refresh clones, discover new repositories, update the graph            |
-| `make index`  | Rebuild the CodeGraph index                                            |
-| `make mcp`    | Redeploy MCP/skill config for every configured agent                   |
-| `make doctor` | Check dependencies and auth                                            |
-| `make clean`  | Remove everything `make setup` created                                 |
-
-For a smaller trial run, use the CLI directly: `.venv/bin/workspace clones --max-repos 4 && make index`.
-
-## Notes
-
-- Clones are shallow (`--depth 1`), read-only snapshots: no history, no builds/tests, no edits.
-- `apm.yml` is the source of truth for MCP servers for every agent, including Pi: APM has no Pi adapter, so `make mcp` generates `.pi/mcp.json` from the same manifest.
-- GitHub MCP container runs with `GITHUB_READ_ONLY=1` and is scoped to the `repos`, `issues`, and `pull_requests` toolsets, so the agent cannot write to GitHub.
+Reload or restart your agent, then invoke `kubevirt-setup` as above.
 
 ## License
 

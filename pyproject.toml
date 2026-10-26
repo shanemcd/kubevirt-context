@@ -1,17 +1,34 @@
 [project]
 name = "kubevirt-context"
-version = "0.1.0"
-description = "KubeVirt organization research workspace CLI"
-requires-python = ">=3.10"
-dependencies = ["click>=8.1", "pyyaml>=6.0"]
+version = "0.2.0"
+description = "Organization-wide KubeVirt context for AI coding agents: one CodeGraph index over every kubevirt repository plus read-only GitHub history"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+dependencies = ["PyGithub>=2.6,<3", "rich>=13.9,<15"]
+keywords = ["kubevirt", "codegraph", "mcp", "agent-skills", "code-review"]
+classifiers = [
+  "Environment :: Console",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/codingben/kubevirt-context"
+Issues = "https://github.com/codingben/kubevirt-context/issues"
 
 [project.scripts]
-workspace = "cli:main"
+kvctx = "kubevirt_context.cli:main"
 
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-py-modules = ["cli", "workspace"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/kubevirt_context"]
+
+# Ship the skills so `uv tool install` is the only install step:
+# `kvctx skills install` then drops the SKILL.md files into an agent's skill dir.
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "kubevirt_context/_skills"
